@@ -8,9 +8,9 @@ enum AuthStatus { initial, loading, success, error }
 
 class AuthController extends GetxController {
   final AuthRepository repo;
-  final PreferencesRepo storage;
+  final PreferencesRepo pref;
 
-  AuthController({required this.repo, required this.storage});
+  AuthController({required this.repo, required this.pref});
 
   Rxn<UserModel> user = Rxn<UserModel>();
   Rx<AuthStatus> status = AuthStatus.initial.obs;
@@ -23,10 +23,9 @@ class AuthController extends GetxController {
     try {
       final result = await repo.login(email, password);
 
-      final userModel = UserModel.fromJson(result.toJson());
+      final userModel = result;
 
       user.value = userModel;
-
 
       status.value = AuthStatus.success;
     } catch (e) {
@@ -34,6 +33,7 @@ class AuthController extends GetxController {
       errorMessage.value = e.toString();
     }
   }
+
   Future<void> signin(String email, String password) async {
     status.value = AuthStatus.loading;
     errorMessage.value = '';
@@ -41,10 +41,10 @@ class AuthController extends GetxController {
     try {
       final result = await repo.signin(email, password);
 
-      final userModel = UserModel.fromJson(result.toJson());
+      final userModel = result;
+      ;
 
       user.value = userModel;
-
 
       status.value = AuthStatus.success;
     } catch (e) {
@@ -58,7 +58,7 @@ class AuthController extends GetxController {
       await repo.logout();
     } catch (_) {}
 
-    await storage.clear();
+    await pref.clear();
     user.value = null;
     status.value = AuthStatus.initial;
   }
@@ -66,7 +66,7 @@ class AuthController extends GetxController {
   Future<void> checkAuth() async {
     status.value = AuthStatus.loading;
 
-    final data = await storage.getUser();
+    final data = await pref.getUser();
 
     if (data == null) {
       user.value = null;
@@ -89,11 +89,6 @@ class AuthController extends GetxController {
   void onInit() {
     super.onInit();
     checkAuth();
-  }
-
-  @override
-  void onClose() {
-    super.onClose();
   }
 
   bool get isLoggedIn => user.value != null;

@@ -17,10 +17,11 @@ class LocalDb {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'task_manager.db');
 
-    return await openDatabase(
+    return openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -30,11 +31,24 @@ class LocalDb {
         id TEXT PRIMARY KEY,
         title TEXT,
         description TEXT,
-        dueDate TEXT,
+        dueDate INTEGER,
         status TEXT,
         priority TEXT,
-        createdAt TEXT
+        createdAt INTEGER,
+        updatedAt INTEGER
       )
     ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      final columns = await db.rawQuery("PRAGMA table_info(tasks)");
+
+      final columnNames = columns.map((e) => e['name']).toList();
+
+      if (!columnNames.contains('updatedAt')) {
+        await db.execute('ALTER TABLE tasks ADD COLUMN updatedAt INTEGER');
+      }
+    }
   }
 }

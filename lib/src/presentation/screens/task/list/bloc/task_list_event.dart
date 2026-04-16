@@ -22,6 +22,15 @@ class DeleteTask extends TaskListEvent {
   DeleteTask(this.taskId);
 }
 
+class ConfirmDeleteTask extends TaskListEvent {
+  final String taskId;
+
+  ConfirmDeleteTask(this.taskId);
+
+  @override
+  List<Object?> get props => [taskId];
+}
+
 class UndoDeleteTask extends TaskListEvent {
   final String taskId;
   UndoDeleteTask(this.taskId);

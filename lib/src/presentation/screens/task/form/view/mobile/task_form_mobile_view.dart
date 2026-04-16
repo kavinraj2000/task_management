@@ -1,133 +1,153 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:form_builder_validators/form_builder_validators.dart';
-
+import 'package:go_router/go_router.dart';
+import 'package:task_management/app/route_name.dart';
 import 'package:task_management/src/data/model/task_model.dart';
 import 'package:task_management/src/presentation/screens/task/form/bloc/task_form_bloc.dart';
-import 'package:task_management/src/presentation/screens/task/list/bloc/task_list_bloc.dart';
 
 class TaskFormMobileView extends StatelessWidget {
-  TaskFormMobileView({super.key});
+  const TaskFormMobileView({super.key});
 
-  final _formKey = GlobalKey<FormBuilderState>();
+  void _submit(
+    BuildContext context,
+    bool isEdit,
+    GlobalKey<FormBuilderState> formKey,
+  ) {
+    final valid = formKey.currentState?.saveAndValidate();
+    if (valid != true) return;
+
+    final value = formKey.currentState!.value;
+
+    final taskModel = TaskModel(
+      id: context.read<TaskFormBloc>().state.initialTask?.id ??
+          DateTime.now().millisecondsSinceEpoch.toString(),
+      title: value['title'],
+      description: value['description'] ?? '',
+      dueDate: value['dueDate'],
+      priority: value['priority'],
+      status: (value['completed'] ?? false)
+          ? TaskStatus.done
+          : TaskStatus.pending,
+      createdAt: context.read<TaskFormBloc>().state.initialTask?.createdAt ??
+          DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    context.read<TaskFormBloc>().add(
+          SubmitForm(taskdata: taskModel, isEdit: isEdit),
+        );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Task Form")),
+    final formKey = GlobalKey<FormBuilderState>();
 
-      body: BlocListener<TaskFormBloc, TaskFormState>(
-        listener: (context, state) {
-          if (state.formStatus == TaskFormStatus.success) {
-            /// 🔥 refresh list after success
-            context.read<TaskListBloc>().add(LoadTasks());
+    return BlocListener<TaskFormBloc, TaskFormState>(
+      listener: (context, state) {
+        if (state.formStatus == TaskFormStatus.success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Task saved successfully')),
+          );
 
-            Navigator.pop(context);
+          Future.delayed(const Duration(milliseconds: 200), () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(RouteName.taskmanagement);
+            }
+          });
+        }
+
+        if (state.formStatus == TaskFormStatus.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.error ?? 'Error occurred')),
+          );
+        }
+      },
+      child: BlocBuilder<TaskFormBloc, TaskFormState>(
+        builder: (context, state) {
+          final initial = state.initialTask;
+          final isEdit = initial != null;
+
+          if (state.formStatus == TaskFormStatus.submitting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
           }
 
-          if (state.formStatus == TaskFormStatus.error) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(state.error ?? "Error")));
-          }
-        },
-
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: FormBuilder(
-            key: _formKey,
-            child: Column(
-              children: [
-                FormBuilderTextField(
-                  name: 'id',
-                  decoration: const InputDecoration(
-                    labelText: "Task ID",
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: FormBuilderValidators.required(),
-                ),
-
-                const SizedBox(height: 12),
-
-                FormBuilderTextField(
-                  name: 'title',
-                  decoration: const InputDecoration(
-                    labelText: "Title",
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: FormBuilderValidators.required(),
-                ),
-
-                const SizedBox(height: 12),
-
-                FormBuilderTextField(
-                  name: 'description',
-                  decoration: const InputDecoration(
-                    labelText: "Description",
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                FormBuilderCheckbox(
-                  name: 'completed',
-                  title: const Text("Mark as Done"),
-                  initialValue: false,
-                ),
-
-                const SizedBox(height: 20),
-
-                BlocBuilder<TaskFormBloc, TaskFormState>(
-                  builder: (context, state) {
-                    final isLoading =
-                        state.formStatus == TaskFormStatus.submitting;
-
-                    return SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: isLoading
-                            ? null
-                            : () {
-                                final isValid = _formKey.currentState
-                                    ?.saveAndValidate();
-
-                                if (isValid != true) return;
-
-                                final value = _formKey.currentState!.value;
-
-                                final bool isDone = value['completed'] ?? false;
-
-                                final task = TaskModel(
-                                  id: value['id'].toString(),
-                                  title: value['title'],
-                                  description: value['description'] ?? '',
-                                  dueDate: DateTime.now().add(
-                                    const Duration(days: 1),
-                                  ),
-                                  createdAt: DateTime.now(),
-                                  status: isDone
-                                      ? TaskStatus.done
-                                      : TaskStatus.pending,
-                                  priority: TaskPriority.medium,
-                                );
-
-                                context.read<TaskFormBloc>().add(
-                                  SubmitForm(taskdata: task),
-                                );
-                              },
-                        child: isLoading
-                            ? const CircularProgressIndicator()
-                            : const Text("Submit"),
-                      ),
-                    );
-                  },
-                ),
-              ],
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(isEdit ? "Edit Task" : "Create Task"),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              ),
             ),
-          ),
-        ),
+            body: FormBuilder(
+              key: formKey,
+              initialValue: {
+                'title': initial?.title ?? '',
+                'description': initial?.description ?? '',
+                'dueDate': initial?.dueDate,
+                'priority': initial?.priority ?? TaskPriority.low,
+                'completed': initial?.status == TaskStatus.done,
+              },
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  FormBuilderTextField(
+                    name: 'title',
+                    decoration: const InputDecoration(labelText: "Title"),
+                  ),
+                  const SizedBox(height: 12),
+                  FormBuilderTextField(
+                    name: 'description',
+                    decoration:
+                        const InputDecoration(labelText: "Description"),
+                  ),
+                  const SizedBox(height: 12),
+                  FormBuilderDateTimePicker(
+                    name: 'dueDate',
+                    inputType: InputType.date,
+                    decoration:
+                        const InputDecoration(labelText: "Due Date"),
+                  ),
+                  const SizedBox(height: 12),
+                  FormBuilderDropdown<TaskPriority>(
+                    name: 'priority',
+                    items: TaskPriority.values
+                        .map(
+                          (e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(e.name.toUpperCase()),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  const SizedBox(height: 12),
+                  FormBuilderCheckbox(
+                    name: 'completed',
+                    title: const Text("Completed"),
+                  ),
+                  const SizedBox(height: 30),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: state.formStatus ==
+                              TaskFormStatus.submitting
+                          ? null
+                          : () => _submit(context, isEdit, formKey),
+                      child: Text(isEdit ? "Update" : "Create"),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

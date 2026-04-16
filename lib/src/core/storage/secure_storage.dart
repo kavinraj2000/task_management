@@ -15,10 +15,6 @@ class SecureStorageService {
     return await _storage.read(key: _tokenKey);
   }
 
-  Future<String?> getExpiry() async {
-    return await _storage.read(key: _expiryKey);
-  }
-
   Future<void> clear() async {
     await _storage.deleteAll();
   }

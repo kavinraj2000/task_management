@@ -5,20 +5,18 @@ abstract class TaskFormEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class LoadFormData extends TaskFormEvent {
+class InitialFormData extends TaskFormEvent {
   final TaskModel? task;
 
-  LoadFormData(this.task);
+  InitialFormData(this.task);
 
- 
+  @override
+  List<Object?> get props => [task];
 }
 
 class SubmitForm extends TaskFormEvent {
   final TaskModel taskdata;
+  final bool isEdit;
 
-  SubmitForm( {required this.taskdata});
-
-
-
- 
+  SubmitForm({required this.taskdata, this.isEdit = false});
 }

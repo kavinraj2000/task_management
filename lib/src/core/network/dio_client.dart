@@ -1,14 +1,17 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:task_management/src/core/storage/secure_storage.dart';
 
 class DioClient {
   final Dio dio;
   final SecureStorageService storage;
-  final void Function()? onLogout;
 
   Future<bool> Function()? onRefreshToken;
 
-  DioClient({required this.storage, this.onLogout}) : dio = Dio() {
+  bool _isRefreshing = false;
+  Completer<bool>? _refreshCompleter;
+
+  DioClient({required this.storage}) : dio = Dio() {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -20,32 +23,53 @@ class DioClient {
         },
 
         onError: (DioException e, handler) async {
-          final is401     = e.response?.statusCode == 401;
-          final isRetry   = e.requestOptions.extra['_retry'] == true;
+          final is401 = e.response?.statusCode == 401;
+          final isRetry = e.requestOptions.extra['_retry'] == true;
 
           if (is401 && !isRetry && onRefreshToken != null) {
-            final refreshed = await onRefreshToken!();
+            try {
+              final refreshed = await _handleRefresh();
 
-            if (refreshed) {
-              final newToken = await storage.getToken();
-              final opts = e.requestOptions
-                ..headers['Authorization'] = 'Bearer $newToken'
-                ..extra['_retry'] = true;          
+              if (refreshed) {
+                final newToken = await storage.getToken();
 
-              try {
-                final retryResp = await dio.fetch(opts);
-                return handler.resolve(retryResp);
-              } catch (retryErr) {
-                return handler.next(e);
+                final opts = e.requestOptions
+                  ..headers['Authorization'] = 'Bearer $newToken'
+                  ..extra['_retry'] = true;
+
+                final response = await dio.fetch(opts);
+                return handler.resolve(response);
               }
+            } catch (_) {
+              // refresh failed
             }
           }
 
           await storage.clear();
-          onLogout?.call();
           handler.next(e);
         },
       ),
     );
+  }
+
+  Future<bool> _handleRefresh() async {
+    if (_isRefreshing) {
+      return _refreshCompleter!.future;
+    }
+
+    _isRefreshing = true;
+    _refreshCompleter = Completer<bool>();
+
+    try {
+      final result = await onRefreshToken!.call();
+
+      _refreshCompleter!.complete(result);
+      return result;
+    } catch (e) {
+      _refreshCompleter!.completeError(e);
+      rethrow;
+    } finally {
+      _isRefreshing = false;
+    }
   }
 }

@@ -17,10 +17,7 @@ class AuthRepository {
   final Logger _log = Logger();
   final Uuid _uuid = const Uuid();
 
-  AuthRepository(
-    this._dioClient,
-    this._pref,
-  );
+  AuthRepository(this._dioClient, this._pref);
 
   Future<UserModel> login(String email, String password) async {
     try {
@@ -53,10 +50,7 @@ class AuthRepository {
     try {
       final response = await _dioClient.dio.post(
         '${_api.baseurl}${Constants.api.auth}',
-        data: {
-          'email': email,
-          'password': password,
-        },
+        data: {'email': email, 'password': password},
       );
 
       final data = _validateMapResponse(response.data);
@@ -86,8 +80,14 @@ class AuthRepository {
     }
   }
 
-  Future<UserModel> refreshToken(UserModel user) async {
+  Future<bool> refreshToken() async {
     try {
+      final data = await _pref.getUser();
+
+      if (data == null) return false;
+
+      final user = UserModel.fromJson(jsonDecode(data));
+
       final updated = user.copyWith(
         token: _uuid.v4(),
         tokenExpiry: DateTime.now().add(const Duration(minutes: 30)),
@@ -95,13 +95,12 @@ class AuthRepository {
 
       await _saveSession(updated);
 
-      return updated;
+      return true;
     } catch (e) {
-      throw Exception("Token refresh failed");
+      _log.e("Refresh failed: $e");
+      return false;
     }
   }
-
-
 
   Future<void> _saveSession(UserModel user) async {
     await _pref.saveUser(jsonEncode(user.toJson()));
@@ -114,21 +113,19 @@ class AuthRepository {
     _log.d("User session saved");
   }
 
-  Map<String, dynamic> _normalizeUser(
-    Map<String, dynamic> data,
-    String email,
-  ) {
+  Map<String, dynamic> _normalizeUser(Map<String, dynamic> data, String email) {
     return {
       ...data,
       "email": email,
       "token": data['token'] ?? _uuid.v4(),
-      "tokenExpiry": data['tokenExpiry'] ??
+      "tokenExpiry":
+          data['tokenExpiry'] ??
           DateTime.now().add(const Duration(minutes: 30)).toIso8601String(),
     };
   }
 
   List _validateListResponse(dynamic data) {
-    if (data is List && data.isNotEmpty) return data;
+    if (data is List) return data;
     throw Exception("Invalid response format (expected List)");
   }
 
@@ -138,8 +135,6 @@ class AuthRepository {
   }
 
   String _extractError(DioException e) {
-    return e.response?.data?['message'] ??
-        e.message ??
-        "Network error";
+    return e.response?.data?['message'] ?? e.message ?? "Network error";
   }
 }

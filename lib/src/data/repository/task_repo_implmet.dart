@@ -7,27 +7,18 @@ import 'package:task_management/src/presentation/screens/task/repo/task_repo.dar
 class TaskRepositoryImpl implements TaskRepository {
   final Dio dio;
   final LocalDataSource local;
+  final baseapi = TaskApiRepo.api;
 
   TaskRepositoryImpl({required this.dio, required this.local});
 
   @override
   Future<List<TaskModel>> fetchTasks() async {
     try {
-      final url = TaskApiRepo.api;
+      final res = await dio.get(baseapi);
 
-      final res = await dio.get(url);
-
-      final tasks = (res.data as List).map((e) {
-        return TaskModel(
-          id: e['id'].toString(),
-          title: e['title'],
-          description: '',
-          dueDate: DateTime.now(),
-          status: TaskStatus.pending,
-          priority: TaskPriority.low,
-          createdAt: DateTime.now(),
-        );
-      }).toList();
+      final tasks = (res.data as List)
+          .map((e) => TaskModel.fromJson(e))
+          .toList();
 
       await local.cacheTasks(tasks);
       return tasks;
@@ -38,19 +29,19 @@ class TaskRepositoryImpl implements TaskRepository {
 
   @override
   Future<void> addTask(TaskModel task) async {
-    await dio.post("/tasks", data: task.toJson());
+    await dio.post(baseapi, data: task.toJson());
     await local.addTask(task);
   }
 
   @override
   Future<void> updateTask(TaskModel task) async {
-    await dio.put("/tasks/${task.id}", data: task.toJson());
+    await dio.put("$baseapi/${task.id}", data: task.toJson());
     await local.updateTask(task);
   }
 
   @override
   Future<void> deleteTask(String id) async {
-    await dio.delete("/tasks/$id");
+    await dio.delete("$baseapi/$id");
     await local.deleteTask(id);
   }
 }

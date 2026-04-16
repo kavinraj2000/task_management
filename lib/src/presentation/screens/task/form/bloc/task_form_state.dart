@@ -1,67 +1,41 @@
 part of 'task_form_bloc.dart';
 
-
-enum TaskFormStatus { initial, submitting, success, error }
+enum TaskFormStatus { initial,loading, submitting, success, error }
 
 class TaskFormState extends Equatable {
-  final String? id;
-  final String? title;
-  final String? description;
-
-  final TaskStatus status;
-  final TaskPriority priority;
-
-  final bool completed;
-
   final TaskFormStatus formStatus;
   final String? error;
+  final TaskModel? initialTask;
+  final bool loaded;
 
   const TaskFormState({
-    this.id,
-    this.title,
-    this.description,
-    this.status = TaskStatus.pending,
-    this.priority = TaskPriority.medium,
-    this.completed = false,
-    this.formStatus = TaskFormStatus.initial,
+    required this.formStatus,
     this.error,
+    this.initialTask,
+    this.loaded = false,
   });
 
   factory TaskFormState.initial() {
-    return const TaskFormState();
+    return const TaskFormState(
+      formStatus: TaskFormStatus.initial,
+      loaded: false,
+    );
   }
 
   TaskFormState copyWith({
-    String? id,
-    String? title,
-    String? description,
-    TaskStatus? status,
-    TaskPriority? priority,
-    bool? completed,
     TaskFormStatus? formStatus,
     String? error,
+    TaskModel? initialTask,
+    bool? loaded,
   }) {
     return TaskFormState(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      description: description ?? this.description,
-      status: status ?? this.status,
-      priority: priority ?? this.priority,
-      completed: completed ?? this.completed,
       formStatus: formStatus ?? this.formStatus,
       error: error,
+      initialTask: initialTask ?? this.initialTask,
+      loaded: loaded ?? this.loaded,
     );
   }
 
   @override
-  List<Object?> get props => [
-        id,
-        title,
-        description,
-        status,
-        priority,
-        completed,
-        formStatus,
-        error,
-      ];
+  List<Object?> get props => [formStatus, error, initialTask, loaded];
 }

@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:task_management/src/data/model/task_model.dart';
@@ -11,26 +10,23 @@ part 'task_form_state.dart';
 class TaskFormBloc extends Bloc<TaskFormEvent, TaskFormState> {
   final TaskRepository repo;
 
-  TaskFormBloc(this.repo) : super(TaskFormState.initial()) {
-
-    on<LoadFormData>(_onLoadFormData);
-
+  TaskFormBloc({
+    required this.repo,
+    TaskModel? task,
+  }) : super(TaskFormState.initial()) {
+    on<InitialFormData>(_onLoadInitialFormData);
     on<SubmitForm>(_onSubmitForm);
+
+    if (task != null) {
+      add(InitialFormData(task));
+    }
   }
 
-  Future<void> _onLoadFormData(
-    LoadFormData event,
+  Future<void> _onLoadInitialFormData(
+    InitialFormData event,
     Emitter<TaskFormState> emit,
   ) async {
-    final task = event.task;
-
-    emit(state.copyWith(
-      id: task?.id,
-      title: task?.title,
-      description: task?.description,
-      status: task?.status,
-      priority: task?.priority,
-    ));
+    emit(state.copyWith(initialTask: event.task));
   }
 
   Future<void> _onSubmitForm(
@@ -40,29 +36,27 @@ class TaskFormBloc extends Bloc<TaskFormEvent, TaskFormState> {
     emit(state.copyWith(formStatus: TaskFormStatus.submitting));
 
     try {
-      final task = TaskModel(
-        id: event.taskdata.id ,
-        title: event.taskdata.title,
-        description: event.taskdata.description ?? '',
-        dueDate: event.taskdata.dueDate ?? DateTime.now(),
-        createdAt: DateTime.now(),
-        status: event.taskdata.status,
-        priority: event.taskdata.priority,
+      final now = DateTime.now();
+
+      final task = event.taskdata.copyWith(
+        createdAt: event.isEdit ? event.taskdata.createdAt : now,
+        updatedAt: now,
       );
 
-      // if (event.isEdit) {
-      //   await repo.updateTask(task);
-      // } else {
-      //   await repo.addTask(task);
-      // }
+      if (event.isEdit) {
+        await repo.updateTask(task);
+      } else {
+        await repo.addTask(task);
+      }
 
       emit(state.copyWith(formStatus: TaskFormStatus.success));
-
     } catch (e) {
-      emit(state.copyWith(
-        formStatus: TaskFormStatus.error,
-        error: e.toString(),
-      ));
+      emit(
+        state.copyWith(
+          formStatus: TaskFormStatus.error,
+          error: e.toString(),
+        ),
+      );
     }
   }
 }
