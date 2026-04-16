@@ -1,5 +1,4 @@
 import 'package:go_router/go_router.dart';
-import 'package:logger/logger.dart';
 import 'package:task_management/app/route_name.dart';
 import 'package:task_management/src/core/services/service_locator.dart';
 import 'package:task_management/src/core/storage/secure_storage.dart';

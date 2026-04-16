@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
 
 import 'package:task_management/src/core/network/dio_client.dart';
@@ -14,7 +13,6 @@ class AuthRepository {
   final DioClient _dioClient;
   final MockApiRepo _api = MockApiRepo();
   final PreferencesRepo _pref;
-  final Logger _log = Logger();
   final Uuid _uuid = const Uuid();
 
   AuthRepository(this._dioClient, this._pref);
@@ -38,10 +36,8 @@ class AuthRepository {
 
       return user;
     } on DioException catch (e) {
-      _log.e("Login DioException: ${e.message}");
       throw Exception(_extractError(e));
     } catch (e) {
-      _log.e("Login Error: $e");
       throw Exception("Login failed");
     }
   }
@@ -63,10 +59,8 @@ class AuthRepository {
 
       return user;
     } on DioException catch (e) {
-      _log.e("Signin DioException: ${e.message}");
       throw Exception(_extractError(e));
     } catch (e) {
-      _log.e("Signin Error: $e");
       throw Exception("Signin failed");
     }
   }
@@ -76,7 +70,7 @@ class AuthRepository {
       await _dioClient.storage.clear();
       await _pref.clear();
     } catch (e) {
-      _log.e("Logout error: $e");
+      throw Exception('unexpected error ');
     }
   }
 
@@ -97,7 +91,6 @@ class AuthRepository {
 
       return true;
     } catch (e) {
-      _log.e("Refresh failed: $e");
       return false;
     }
   }
@@ -110,7 +103,6 @@ class AuthRepository {
       user.tokenExpiry.toIso8601String(),
     );
 
-    _log.d("User session saved");
   }
 
   Map<String, dynamic> _normalizeUser(Map<String, dynamic> data, String email) {

@@ -54,12 +54,9 @@ dependencies:
   flutter_form_builder: ^10.3.0+2
   form_builder_validators: ^11.3.0
   shared_preferences: ^2.5.5
-  logger: ^2.7.0
   sqflite: ^2.4.2
   bloc: ^9.2.0
   sqflite_common_ffi: ^2.4.0+2
-  flutter_background_service_android: ^6.3.1
-  flutter_local_notifications: ^21.0.0
 
 dev_dependencies:
   flutter_test:

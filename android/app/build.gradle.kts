@@ -53,7 +53,7 @@ android {
         release {
             signingConfig = signingConfigs.getByName("release")
 
-            // optional optimizations
+            // production optimizations (safe default)
             isMinifyEnabled = false
             isShrinkResources = false
         }
@@ -65,7 +65,8 @@ android {
 }
 
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    // ✅ FIXED: required by flutter_local_notifications
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
 flutter {
