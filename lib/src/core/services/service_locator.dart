@@ -5,7 +5,7 @@ import 'package:task_management/src/data/database/local_datasource.dart';
 import 'package:task_management/src/data/database/local_db.dart';
 import 'package:task_management/src/data/repository/prefernces_repo.dart';
 import 'package:task_management/src/data/repository/task_repo_implmet.dart';
-import 'package:task_management/src/feature/auth/repo/auth_repo.dart';
+import 'package:task_management/src/presentation/screens/auth/repo/auth_repo.dart';
 import 'package:task_management/src/presentation/screens/auth/controller/auth_controller.dart';
 import 'package:task_management/src/presentation/screens/task/repo/task_repo.dart';
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:task_management/src/data/model/task_model.dart';
 import 'package:task_management/src/presentation/screens/task/list/bloc/task_list_bloc.dart';
-import 'package:task_management/src/presentation/widgets/task_tile_widget.dart';
+import 'package:task_management/src/core/shared/widgets/task_tile_widget.dart';
 
 class TaskSwipeItem extends StatelessWidget {
   final TaskModel task;

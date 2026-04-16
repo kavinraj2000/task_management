@@ -10,11 +10,7 @@ class TaskFormView extends StatelessWidget {
   final TaskRepository repository;
   final TaskModel? task;
 
-  const TaskFormView({
-    super.key,
-    required this.repository,
-    this.task,
-  });
+  const TaskFormView({super.key, required this.repository, this.task});
 
   static final Logger _logger = Logger();
 
@@ -23,11 +19,8 @@ class TaskFormView extends StatelessWidget {
     _logger.d("TaskFormView task: $task");
 
     return BlocProvider(
-      create: (_) => TaskFormBloc(
-        repo: repository,
-        task: task, // ✅ passed safely into Bloc
-      ),
-      child:  TaskFormMobileView(),
+      create: (_) => TaskFormBloc(repo: repository, task: task),
+      child: TaskFormMobileView(),
     );
   }
 }

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:task_management/src/data/model/user_model.dart';
 import 'package:task_management/src/data/repository/prefernces_repo.dart';
-import 'package:task_management/src/feature/auth/repo/auth_repo.dart';
+import 'package:task_management/src/presentation/screens/auth/repo/auth_repo.dart';
 
 enum AuthStatus { initial, loading, success, error }
 

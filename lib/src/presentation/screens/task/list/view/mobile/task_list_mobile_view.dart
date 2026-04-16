@@ -6,9 +6,9 @@ import 'package:task_management/app/route_name.dart';
 import 'package:task_management/src/core/services/service_locator.dart';
 import 'package:task_management/src/presentation/screens/auth/controller/auth_controller.dart';
 import 'package:task_management/src/presentation/screens/task/list/bloc/task_list_bloc.dart';
-import 'package:task_management/src/presentation/widgets/empty_state.dart';
-import 'package:task_management/src/presentation/widgets/filter_chip_widget.dart';
-import 'package:task_management/src/presentation/widgets/task_swip_item_widget.dart';
+import 'package:task_management/src/core/shared/widgets/empty_state.dart';
+import 'package:task_management/src/core/shared/widgets/filter_chip_widget.dart';
+import 'package:task_management/src/core/shared/widgets/task_swip_item_widget.dart';
 
 class TaskMobileView extends StatelessWidget {
   const TaskMobileView({super.key});
