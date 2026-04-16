@@ -3,17 +3,23 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class SecureStorageService {
   final _storage = const FlutterSecureStorage();
 
-  static const _key = "user_token";
+  static const _tokenKey = "auth_token";
+  static const _expiryKey = "token_expiry";
 
-  Future<void> saveUser(String json) async {
-    await _storage.write(key: _key, value: json);
+  Future<void> saveToken(String token, String expiry) async {
+    await _storage.write(key: _tokenKey, value: token);
+    await _storage.write(key: _expiryKey, value: expiry);
   }
 
-  Future<String?> getUser() async {
-    return await _storage.read(key: _key);
+  Future<String?> getToken() async {
+    return await _storage.read(key: _tokenKey);
+  }
+
+  Future<String?> getExpiry() async {
+    return await _storage.read(key: _expiryKey);
   }
 
   Future<void> clear() async {
-    await _storage.delete(key: _key);
+    await _storage.deleteAll();
   }
 }

@@ -28,4 +28,18 @@ class UserModel {
     "token": token,
     "tokenExpiry": tokenExpiry.toIso8601String(),
   };
+
+  UserModel copyWith({
+    String? id,
+    String? email,
+    String? token,
+    DateTime? tokenExpiry,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      token: token ?? this.token,
+      tokenExpiry: tokenExpiry ?? this.tokenExpiry,
+    );
+  }
 }

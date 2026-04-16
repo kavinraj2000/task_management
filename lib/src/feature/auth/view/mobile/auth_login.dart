@@ -1,33 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
+import 'package:task_management/app/route_name.dart';
 import 'package:task_management/src/core/services/service_locator.dart';
 import 'package:task_management/src/feature/auth/controller/auth_controller.dart';
 
-class AuthLoginPage extends StatefulWidget {
-  const AuthLoginPage({super.key});
+class AuthLoginPage extends StatelessWidget {
+  AuthLoginPage({super.key});
 
-  @override
-  State<AuthLoginPage> createState() => _AuthLoginPageState();
-}
-
-class _AuthLoginPageState extends State<AuthLoginPage> {
-  final controller = getIt<AuthController>();
-
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+  final AuthController controller = getIt<AuthController>();
+  final GlobalKey<FormBuilderState> _formKey = GlobalKey<FormBuilderState>();
 
   void _login() {
-    controller.login(
-      emailController.text.trim(),
-      passwordController.text.trim(),
-    );
-  }
+    if (_formKey.currentState?.saveAndValidate() ?? false) {
+      final data = _formKey.currentState!.value;
 
-  @override
-  void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
-    super.dispose();
+      controller.login(
+        data['email'].toString().trim(),
+        data['password'].toString().trim(),
+      );
+    }
   }
 
   @override
@@ -36,68 +30,96 @@ class _AuthLoginPageState extends State<AuthLoginPage> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                "Login",
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-              ),
-
-              const SizedBox(height: 30),
-
-              /// EMAIL
-              TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: "Email",
-                  border: OutlineInputBorder(),
+          child: FormBuilder(
+            key: _formKey,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  "Login",
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                 ),
-              ),
 
-              const SizedBox(height: 15),
+                const SizedBox(height: 30),
 
-              /// PASSWORD
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: "Password",
-                  border: OutlineInputBorder(),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              /// LOADING BUTTON (REACTIVE)
-              Obx(() {
-                return SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: controller.isLoading ? null : _login,
-                    child: controller.isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text("Login"),
+                /// EMAIL
+                FormBuilderTextField(
+                  name: 'email',
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: "Email",
+                    border: OutlineInputBorder(),
                   ),
-                );
-              }),
+                  validator: FormBuilderValidators.compose([
+                    FormBuilderValidators.required(),
+                    FormBuilderValidators.email(),
+                  ]),
+                ),
 
-              const SizedBox(height: 10),
+                const SizedBox(height: 15),
 
-              /// ERROR UI (REACTIVE)
-              Obx(() {
-                if (controller.errorMessage.isEmpty) {
-                  return const SizedBox.shrink();
-                }
+                /// PASSWORD
+                FormBuilderTextField(
+                  name: 'password',
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: "Password",
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: FormBuilderValidators.compose([
+                    FormBuilderValidators.required(),
+                    FormBuilderValidators.minLength(6),
+                  ]),
+                ),
 
-                return Text(
-                  controller.errorMessage.value,
-                  style: const TextStyle(color: Colors.red),
-                );
-              }),
-            ],
+                const SizedBox(height: 20),
+
+                Obx(() {
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: controller.isLoading ? null : _login,
+                      child: controller.isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text("Login"),
+                    ),
+                  );
+                }),
+
+                const Spacer(),
+
+                TextButton(
+                  onPressed: () {
+                    context.goNamed(RouteName.signin);
+                  },
+                  child: const Text(
+                    'Sign in',
+                    style: TextStyle(color: Colors.blue),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                Obx(() {
+                  if (controller.errorMessage.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Text(
+                    controller.errorMessage.value,
+                    style: const TextStyle(color: Colors.red),
+                  );
+                }),
+              ],
+            ),
           ),
         ),
       ),

@@ -1,59 +1,145 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
+import 'package:logger/logger.dart';
 import 'package:uuid/uuid.dart';
+
+import 'package:task_management/src/core/network/dio_client.dart';
 import 'package:task_management/src/core/constants/constants.dart';
+import 'package:task_management/src/data/model/user_model.dart';
 import 'package:task_management/src/data/repository/mock_api_repo.dart';
+import 'package:task_management/src/data/repository/prefernces_repo.dart';
 
 class AuthRepository {
-  final Dio dio = Dio();
-  final MockApiRepo baseapi = MockApiRepo();
+  final DioClient _dioClient;
+  final MockApiRepo _api = MockApiRepo();
+  final PreferencesRepo _pref;
+  final Logger _log = Logger();
+  final Uuid _uuid = const Uuid();
 
-  AuthRepository();
+  AuthRepository(
+    this._dioClient,
+    this._pref,
+  );
 
-  final _uuid = const Uuid();
-
-  Future<Map<String, dynamic>> signin(String email, String password) async {
+  Future<UserModel> login(String email, String password) async {
     try {
-      final response = await dio.post(
-        '${baseapi.baseurl}${Constants.api.login}',
-        data: {'email': email, 'password': password},
-        options: Options(headers: {'content-type': 'application/json'}),
+      final response = await _dioClient.dio.get(
+        '${_api.baseurl}${Constants.api.auth}',
+        queryParameters: {'email': email},
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = response.data;
+      final data = _validateListResponse(response.data);
 
-        final Map<String, dynamic> result = Map<String, dynamic>.from(data);
+      final userData = data.first;
 
-        result['token'] ??= _uuid.v4();
+      final userMap = _normalizeUser(userData, email);
 
-        result['tokenExpiry'] ??= DateTime.now()
-            .add(const Duration(minutes: 30))
-            .toIso8601String();
+      final user = UserModel.fromJson(userMap);
 
-        result['email'] = email;
+      await _saveSession(user);
 
-        return result;
-      } else {
-        throw Exception('Signin failed');
-      }
+      return user;
+    } on DioException catch (e) {
+      _log.e("Login DioException: ${e.message}");
+      throw Exception(_extractError(e));
     } catch (e) {
-      throw Exception('Signin error: $e');
+      _log.e("Login Error: $e");
+      throw Exception("Login failed");
     }
   }
 
-  Future<Map<String, dynamic>> login(String email, String password) async {
-    return signin(email, password);
+  Future<UserModel> signin(String email, String password) async {
+    try {
+      final response = await _dioClient.dio.post(
+        '${_api.baseurl}${Constants.api.auth}',
+        data: {
+          'email': email,
+          'password': password,
+        },
+      );
+
+      final data = _validateMapResponse(response.data);
+
+      final userMap = _normalizeUser(data, email);
+
+      final user = UserModel.fromJson(userMap);
+
+      await _saveSession(user);
+
+      return user;
+    } on DioException catch (e) {
+      _log.e("Signin DioException: ${e.message}");
+      throw Exception(_extractError(e));
+    } catch (e) {
+      _log.e("Signin Error: $e");
+      throw Exception("Signin failed");
+    }
   }
 
-  Future<Map<String, dynamic>> refreshToken(Map<String, dynamic> user) async {
-    await Future.delayed(const Duration(seconds: 2));
+  Future<void> logout() async {
+    try {
+      await _dioClient.storage.clear();
+      await _pref.clear();
+    } catch (e) {
+      _log.e("Logout error: $e");
+    }
+  }
 
+  Future<UserModel> refreshToken(UserModel user) async {
+    try {
+      final updated = user.copyWith(
+        token: _uuid.v4(),
+        tokenExpiry: DateTime.now().add(const Duration(minutes: 30)),
+      );
+
+      await _saveSession(updated);
+
+      return updated;
+    } catch (e) {
+      throw Exception("Token refresh failed");
+    }
+  }
+
+
+
+  Future<void> _saveSession(UserModel user) async {
+    await _pref.saveUser(jsonEncode(user.toJson()));
+
+    await _dioClient.storage.saveToken(
+      user.token,
+      user.tokenExpiry.toIso8601String(),
+    );
+
+    _log.d("User session saved");
+  }
+
+  Map<String, dynamic> _normalizeUser(
+    Map<String, dynamic> data,
+    String email,
+  ) {
     return {
-      ...user,
-      "token": _uuid.v4(),
-      "tokenExpiry": DateTime.now()
-          .add(const Duration(minutes: 10))
-          .toIso8601String(),
+      ...data,
+      "email": email,
+      "token": data['token'] ?? _uuid.v4(),
+      "tokenExpiry": data['tokenExpiry'] ??
+          DateTime.now().add(const Duration(minutes: 30)).toIso8601String(),
     };
+  }
+
+  List _validateListResponse(dynamic data) {
+    if (data is List && data.isNotEmpty) return data;
+    throw Exception("Invalid response format (expected List)");
+  }
+
+  Map<String, dynamic> _validateMapResponse(dynamic data) {
+    if (data is Map<String, dynamic>) return data;
+    throw Exception("Invalid response format (expected Map)");
+  }
+
+  String _extractError(DioException e) {
+    return e.response?.data?['message'] ??
+        e.message ??
+        "Network error";
   }
 }

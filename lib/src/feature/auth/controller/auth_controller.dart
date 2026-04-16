@@ -1,19 +1,18 @@
 import 'dart:convert';
 import 'package:get/get.dart';
-import 'package:task_management/src/core/storage/secure_storage.dart';
 import 'package:task_management/src/data/model/user_model.dart';
+import 'package:task_management/src/data/repository/prefernces_repo.dart';
 import 'package:task_management/src/feature/auth/repo/auth_repo.dart';
 
-enum AuthStatus { initial, loading, success, error, refreshing }
+enum AuthStatus { initial, loading, success, error }
 
 class AuthController extends GetxController {
   final AuthRepository repo;
-  final SecureStorageService storage;
+  final PreferencesRepo storage;
 
   AuthController({required this.repo, required this.storage});
 
   Rxn<UserModel> user = Rxn<UserModel>();
-
   Rx<AuthStatus> status = AuthStatus.initial.obs;
   RxString errorMessage = ''.obs;
 
@@ -24,19 +23,17 @@ class AuthController extends GetxController {
     try {
       final result = await repo.login(email, password);
 
-      final userModel = UserModel.fromJson(result);
+      final userModel = UserModel.fromJson(result.toJson());
 
       user.value = userModel;
 
-      await storage.saveUser(jsonEncode(result));
 
       status.value = AuthStatus.success;
     } catch (e) {
       status.value = AuthStatus.error;
-      errorMessage.value = "Login failed";
+      errorMessage.value = e.toString();
     }
   }
-
   Future<void> signin(String email, String password) async {
     status.value = AuthStatus.loading;
     errorMessage.value = '';
@@ -44,31 +41,26 @@ class AuthController extends GetxController {
     try {
       final result = await repo.signin(email, password);
 
-      final userModel = UserModel.fromJson(result);
+      final userModel = UserModel.fromJson(result.toJson());
 
       user.value = userModel;
 
-      await storage.saveUser(jsonEncode(result));
 
       status.value = AuthStatus.success;
     } catch (e) {
       status.value = AuthStatus.error;
-      errorMessage.value = "Signin failed";
+      errorMessage.value = e.toString();
     }
   }
 
   Future<void> logout() async {
-    status.value = AuthStatus.loading;
-
     try {
-      user.value = null;
-      await storage.clear();
+      await repo.logout();
+    } catch (_) {}
 
-      status.value = AuthStatus.initial;
-    } catch (e) {
-      status.value = AuthStatus.error;
-      errorMessage.value = "Logout failed";
-    }
+    await storage.clear();
+    user.value = null;
+    status.value = AuthStatus.initial;
   }
 
   Future<void> checkAuth() async {
@@ -77,23 +69,33 @@ class AuthController extends GetxController {
     final data = await storage.getUser();
 
     if (data == null) {
+      user.value = null;
       status.value = AuthStatus.initial;
       return;
     }
 
     final userModel = UserModel.fromJson(jsonDecode(data));
 
-    user.value = userModel;
-
     if (userModel.isTokenExpired) {
       await logout();
-    } else {
-      status.value = AuthStatus.success;
+      return;
     }
+
+    user.value = userModel;
+    status.value = AuthStatus.success;
   }
 
-  // ---------------- GETTERS ----------------
-  bool get isLoggedIn => user.value != null;
+  @override
+  void onInit() {
+    super.onInit();
+    checkAuth();
+  }
 
+  @override
+  void onClose() {
+    super.onClose();
+  }
+
+  bool get isLoggedIn => user.value != null;
   bool get isLoading => status.value == AuthStatus.loading;
 }

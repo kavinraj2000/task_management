@@ -1,4 +1,4 @@
 class ApiConstants {
-  final String login = '/login';
+  final String auth = '/login';
   final String taskmanagemnt = '/taskmanagemnt';
 }
